@@ -1,8 +1,8 @@
 {
   "name": "bsc_nft",
   "version": "1.0.0",
-  "description": "NFT on Binance Smart Chain",
-  "author": "github.com/xternet",
+  "private":true,
+  "description": "Bubble sort",
   "dependencies": {
     "@openzeppelin/contracts": "3.4.1",
     "@truffle/hdwallet-provider": "1.2.2",
