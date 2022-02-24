@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
+pragma abicoder v2;
 pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./NFTLibrary.sol";
 import "./NwBTCNFT.sol";
 
-contract NFT is ERC721, Ownable {
+contract NFT is ERC721, NwBTCNFT, Ownable {
   
     address payable public _owner;
 
@@ -16,7 +19,18 @@ contract NFT is ERC721, Ownable {
     mapping(uint256 => uint256) tokenIdToHash;
     
     string public _baseURI = "https://";
+
+    IERC20 private _nwBTCToken;
+    address public _stakeAddress;
+ 
+    function setTokenAddress( IERC20 _token ) public onlyOwner {
+        _nwBTCToken = _token;
+    }
     
+    function setStakeAddress( address addr ) public onlyOwner {
+        _stakeAddress = addr;
+    }
+ 
     function setBaseURI(string memory _base) onlyOwner external {
         _baseURI = _base;
     }
@@ -36,8 +50,9 @@ contract NFT is ERC721, Ownable {
         string[] urls;
     }
  
+    using Counters for Counters.Counter;
     Counters.Counter private _collection;
-    Counters.Counter private tokenIds;
+    Counters.Counter private _tokenIds;
  
     constructor() ERC721("NFTS", "nfts+") {
   	    _owner = msg.sender;
@@ -87,6 +102,8 @@ contract NFT is ERC721, Ownable {
         uint256 _season = hash & 0xff;
         uint256 _indexURL = ( ( hash >> 8 ) & 0xff ) % uint8( indexToCollection[ _season ].urls.length );
 
+        uint256 num = _tokenId - indexToCollection[ _season ].start ;
+        
         return
             string(
                 abi.encodePacked(
@@ -120,7 +137,7 @@ contract NFT is ERC721, Ownable {
     }
 
     function canMint() external override returns (bool){
-        return ( 0 < (( indexToBodyType[ _bodyCount.current() ].start + indexToBodyType[_bodyCount.current()].amount ) - _tokenIds.current()));
+        return ( 0 < (( indexToCollection[ _collection.current() ].start + indexToCollection[ _collection.current() ].amount ) - _tokenIds.current() ));
     }
 
     function getHash(uint256 season,  uint256 _t ,address _a , uint256 _c )
@@ -160,11 +177,11 @@ contract NFT is ERC721, Ownable {
             urls: _urls
         });
 
-        indexToBodyType[ _collection.current() ] = _struct;
+        indexToCollection[ _collection.current() ] = _struct;
         return _collection.current();
     }
 
-  function mint(string memory _tokenURI) external onlyOwner {
+  function mint() external override {
     require( ( indexToCollection[ _collection.current() ].start + indexToCollection[ _collection.current() ].amount )  > (_tokenIds.current() + 1) , "Season has ended");
         require(_collection.current() > 0, "No default art");
         
